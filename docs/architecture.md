@@ -1,128 +1,14 @@
-classDiagram
-  class dim_store {
-    store_key PK
-    store_id
-    name
-    region
-    format
-    opened_date
-    closed_date
-  }
+flowchart LR
+  A["CSV Dataset (data/retail_dw_sample)"] -->|COPY| B["Postgres STAGING (schema stg)"]
+  B -->|SQL / ETL| C["Conformed Dimensions & Facts (schema retail_dw)"]
+  C -->|Direct Connect| D["Power BI Reports and DQ Views"]
 
-  class dim_product {
-    product_key PK
-    sku
-    upc
-    brand
-    category
-    subcategory
-    size
-    cost
-    list_price
-    status
-    effective_from
-    effective_to
-    is_current
-  }
+  subgraph Guardrails
+    V1["v_bad_promo_unlimited_cash"]
+    V2["v_promo_date_issues"]
+    V3["v_promo_leakage_signals"]
+  end
 
-  class dim_customer {
-    customer_key PK
-    customer_id
-    segment
-    loyalty_tier
-    effective_from
-    effective_to
-    is_current
-  }
-
-  class dim_promo {
-    promo_key PK
-    promo_id
-    name
-    type
-    benefit_type
-    benefit_value
-    min_threshold
-    max_uses_per_cust
-    start_ts
-    end_ts
-    channels_allowed
-    inclusion_rule_json
-    exclusion_rule_json
-    created_by
-    created_ts
-    status
-    effective_from
-    effective_to
-    is_current
-  }
-
-  class bridge_promo_product {
-    promo_key FK
-    product_key FK
-    rule_type
-  }
-
-  class dim_date {
-    date_key PK
-    date
-    week_of_year
-    month
-    quarter
-    year
-    is_weekend
-  }
-
-  class fact_sales {
-    order_id
-    order_line_id
-    date_key FK
-    store_key FK
-    product_key FK
-    customer_key FK
-    promo_key FK
-    qty
-    gross_sales
-    discount_amt
-    net_sales
-    channel
-  }
-
-  class fact_promo_redemption {
-    basket_id
-    promo_key FK
-    product_key FK
-    date_key FK
-    store_key FK
-    customer_key FK
-    redemption_qty
-    discount_amt
-  }
-
-  class fact_inventory {
-    date_key FK
-    store_key FK
-    product_key FK
-    on_hand
-    on_order
-    cost
-  }
-
-  fact_sales --> dim_store : store_key
-  fact_sales --> dim_product : product_key
-  fact_sales --> dim_customer : customer_key
-  fact_sales --> dim_promo : promo_key
-  fact_sales --> dim_date : date_key
-
-  bridge_promo_product --> dim_promo : promo_key
-  bridge_promo_product --> dim_product : product_key
-
-  fact_promo_redemption --> dim_store : store_key
-  fact_promo_redemption --> dim_product : product_key
-  fact_promo_redemption --> dim_customer : customer_key
-  fact_promo_redemption --> dim_promo : promo_key
-  fact_promo_redemption --> dim_date : date_key
-
-  fact_inventory --> dim_store : store_key
-  fact_inventory --> dim_product : product_key
-  fact_inventory --> dim_date : date_key
+  C --> V1
+  C --> V2
+  C --> V3
