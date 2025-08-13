@@ -1,172 +1,127 @@
 Project retail_dw {
   database_type: "PostgreSQL"
-  note: "Retail promotions & sales DW — dims, facts, and a promo↔product bridge"
 }
 
-/* =========================
-   DIMENSIONS
-   ========================= */
-
 Table dim_date {
-  date_key        int        [pk] // yyyymmdd
-  date            date       [not null]
-  day_name        varchar
-  week_of_year    int
-  month           int
-  month_name      varchar
-  quarter         int
-  year            int
-  fiscal_month    int
-  fiscal_quarter  int
-  fiscal_year     int
-  is_weekend      boolean
-  Note: 'Calendar/date dimension'
+  date_key int [pk]
+  date date
+  day_name varchar
+  week_of_year int
+  month int
+  month_name varchar
+  quarter int
+  year int
+  fiscal_month int
+  fiscal_quarter int
+  fiscal_year int
+  is_weekend boolean
 }
 
 Table dim_store {
-  store_key   bigserial  [pk]        // surrogate key
-  store_id    varchar    [unique]    // business key
-  name        varchar
-  region      varchar
-  format      varchar
+  store_key bigint [pk]
+  store_id varchar [unique]
+  name varchar
+  region varchar
+  format varchar
   opened_date date
   closed_date date
-  Note: 'Store attributes'
 }
 
 Table dim_product {
-  product_key    bigserial [pk]
-  sku            varchar           // business key
-  upc            varchar
-  brand          varchar
-  category       varchar
-  subcategory    varchar
-  size           varchar
-  cost           numeric
-  list_price     numeric
-  status         varchar
-  effective_from timestamp [not null]
-  effective_to   timestamp
-  is_current     boolean   [default: true]
-  Note: 'SCD2 product dimension (current row flagged)'
-  Indexes {
-    (sku, is_current)
-  }
+  product_key bigint [pk]
+  sku varchar
+  upc varchar
+  brand varchar
+  category varchar
+  subcategory varchar
+  size varchar
+  cost numeric
+  list_price numeric
+  status varchar
+  effective_from timestamp
+  effective_to timestamp
+  is_current boolean
+  Indexes { (sku, is_current) }
 }
 
 Table dim_customer {
-  customer_key   bigserial [pk]
-  customer_id    varchar           // business key
-  segment        varchar
-  loyalty_tier   varchar
-  effective_from timestamp [not null]
-  effective_to   timestamp
-  is_current     boolean   [default: true]
-  Note: 'SCD2 customer dimension'
-  Indexes {
-    (customer_id, is_current)
-  }
+  customer_key bigint [pk]
+  customer_id varchar
+  segment varchar
+  loyalty_tier varchar
+  effective_from timestamp
+  effective_to timestamp
+  is_current boolean
+  Indexes { (customer_id, is_current) }
 }
 
 Table dim_promo {
-  promo_key            bigserial [pk]
-  promo_id             varchar           // business key
-  name                 varchar
-  type                 varchar           // Item | Basket
-  benefit_type         varchar           // PCT | CASH | BOGO
-  benefit_value        numeric
-  min_threshold        numeric
-  max_uses_per_cust    int
-  start_ts             timestamp
-  end_ts               timestamp
-  channels_allowed     varchar
-  inclusion_rule_json  json
-  exclusion_rule_json  json
-  created_by           varchar
-  created_ts           timestamp
-  status               varchar
-  effective_from       timestamp [not null]
-  effective_to         timestamp
-  is_current           boolean   [default: true]
-  Note: 'SCD2 promotion dimension with rule JSON'
-  Indexes {
-    (promo_id, is_current)
-  }
+  promo_key bigint [pk]
+  promo_id varchar
+  name varchar
+  type varchar
+  benefit_type varchar
+  benefit_value numeric
+  min_threshold numeric
+  max_uses_per_cust int
+  start_ts timestamp
+  end_ts timestamp
+  channels_allowed varchar
+  inclusion_rule_json json
+  exclusion_rule_json json
+  created_by varchar
+  created_ts timestamp
+  status varchar
+  effective_from timestamp
+  effective_to timestamp
+  is_current boolean
+  Indexes { (promo_id, is_current) }
 }
-
-/* =========================
-   BRIDGE (M:N PROMO↔PRODUCT)
-   ========================= */
 
 Table bridge_promo_product {
-  promo_key   bigint  // FK to dim_promo
-  product_key bigint  // FK to dim_product
-  rule_type   varchar // 'inclusion' | 'exclusion'
-  Note: 'Maps which products a promo applies to'
-  Indexes {
-    (promo_key, product_key, rule_type) [pk]
-  }
+  promo_key bigint
+  product_key bigint
+  rule_type varchar
+  Indexes { (promo_key, product_key, rule_type) [pk] }
 }
 
-/* =========================
-   FACTS
-   ========================= */
-
 Table fact_sales {
-  order_id        varchar
-  order_line_id   varchar
-  date_key        int
-  store_key       bigint
-  product_key     bigint
-  customer_key    bigint
-  promo_key       bigint
-  qty             numeric
-  gross_sales     numeric
-  discount_amt    numeric
-  net_sales       numeric
-  channel         varchar
-  Note: 'Line-level sales; promo_key nullable when no promo applied'
-  Indexes {
-    (order_id, order_line_id) [pk]
-    (date_key)
-    (store_key)
-    (product_key)
-    (promo_key)
-  }
+  order_id varchar
+  order_line_id varchar
+  date_key int
+  store_key bigint
+  product_key bigint
+  customer_key bigint
+  promo_key bigint
+  qty numeric
+  gross_sales numeric
+  discount_amt numeric
+  net_sales numeric
+  channel varchar
+  Indexes { (order_id, order_line_id) [pk] }
 }
 
 Table fact_promo_redemption {
-  basket_id      varchar
-  date_key       int
-  store_key      bigint
-  product_key    bigint
-  customer_key   bigint
-  promo_key      bigint
+  basket_id varchar
+  date_key int
+  store_key bigint
+  product_key bigint
+  customer_key bigint
+  promo_key bigint
   redemption_qty numeric
-  discount_amt   numeric
-  Note: 'Promo redemption by basket & SKU'
-  Indexes {
-    (basket_id, promo_key, product_key) [pk]
-    (date_key)
-  }
+  discount_amt numeric
+  Indexes { (basket_id, promo_key, product_key) [pk] }
 }
 
 Table fact_inventory {
-  date_key    int
-  store_key   bigint
+  date_key int
+  store_key bigint
   product_key bigint
-  on_hand     numeric
-  on_order    numeric
-  cost        numeric
-  Note: 'Inventory snapshots (e.g., monthly)'
-  Indexes {
-    (date_key, store_key, product_key) [pk]
-  }
+  on_hand numeric
+  on_order numeric
+  cost numeric
+  Indexes { (date_key, store_key, product_key) [pk] }
 }
-
-/* =========================
-   RELATIONSHIPS
-   ========================= */
 
 Ref: fact_sales.date_key        > dim_date.date_key
 Ref: fact_sales.store_key       > dim_store.store_key
@@ -186,22 +141,3 @@ Ref: fact_inventory.product_key > dim_product.product_key
 
 Ref: bridge_promo_product.promo_key   > dim_promo.promo_key
 Ref: bridge_promo_product.product_key > dim_product.product_key
-
-/* (optional) Groups for nicer layout in dbdiagram */
-TableGroup "Dimensions" {
-  dim_date
-  dim_store
-  dim_product
-  dim_customer
-  dim_promo
-}
-
-TableGroup "Facts" {
-  fact_sales
-  fact_promo_redemption
-  fact_inventory
-}
-
-TableGroup "Bridges" {
-  bridge_promo_product
-}
